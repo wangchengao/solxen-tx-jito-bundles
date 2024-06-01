@@ -19,6 +19,9 @@ type Sol struct {
 	ProgramId string
 	HdPath    string
 	Kind      int
+
+	// jito bundle enable
+	EnableJitoBundles bool
 }
 type Config struct {
 	service.ServiceConf

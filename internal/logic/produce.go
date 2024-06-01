@@ -103,11 +103,18 @@ func (l *Producer) Start() {
 		// }
 
 		// 3.Miner
-
-		err = l.Miner()
-		if err != nil {
-			logx.Errorf("Mint err:%v", err)
-			continue
+		if l.svcCtx.Config.Sol.EnableJitoBundles {
+			err = l.BundlesMiner()
+			if err != nil {
+				logx.Errorf("Mint err:%v", err)
+				continue
+			}
+		} else {
+			err = l.Miner()
+			if err != nil {
+				logx.Errorf("Mint err:%v", err)
+				continue
+			}
 		}
 
 		time.Sleep(time.Duration(l.svcCtx.Config.Sol.Time) * time.Millisecond)

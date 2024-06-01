@@ -12,4 +12,4 @@ Sol:
   ToAddr: "0x405113f4376A7769E61e82c5cdA16c80Cc9c0bd8"          # eth空投地址 [eth address for receiving xn airdrop]
   ProgramID: "5tungisGgk1fmGXxacNT1NkPtZgRwJnJPVMK5kfHqx2m"     # solxen合约地址 [solxen contract address]
   Time: 1000                                                    # 间隔时间(单位毫秒) [interval time (milliseconds)]
-
+  EnableJitoBundles: true                                       # 启动 jito bundle 一次提交五个tx， fee会变为五个tx的bundle fee tip
