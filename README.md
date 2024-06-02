@@ -11,6 +11,36 @@ make all
 
 ./solxen-tx miner
 ```
+
+### 如果直接下载
+
+https://github.com/wangchengao/solxen-tx-jito-bundles/releases
+
+Windows (x64):
+```shell
+solxen-tx-windows-amd64.zip
+```
+
+Linux (x64):
+```shell
+solxen-tx-linux-amd64.tar.gz
+```
+
+Linux (arm64):
+```shell
+solxen-tx-linux-arm64.tar.gz
+```
+
+macOS (x64):
+```shell
+solxen-tx-darwin-amd64.tar.gz
+```
+
+macOS (arm64):
+```shell
+solxen-tx-darwin-arm64.tar.gz
+```
+
 ### 性能：
 榜单
 ![img.png](readme/img.png)
@@ -80,6 +110,7 @@ Sol:
   Mnemonic: ""                                                  # 助记词 [mnemonic phrase]
   Num: 1                                                        # 并发数 [concurrency]
   Fee: 3000                                                     # 优先级费用 [priority fee]
+  Kind: 1                                                       # -1 按照账户分配 kind， -2 随机分配kind（谨慎改成随机, minter的时候要kind改成从0，1，2，3 分四次mint）
   ToAddr: "0x4A7766a5BD50DFAB5665d27eDfA25471b194E204"          # eth空投地址 [eth address for receiving xn airdrop]
   ProgramID: "7LBe4g8Q6hq8Sk1nT8tQUiz2mCHjsoQJbmZ7zCQtutuT"     # solxen合约地址 [solxen contract address]
   Time: 1000                                                    # 间隔时间(单位毫秒) [interval time (milliseconds)]

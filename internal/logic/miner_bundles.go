@@ -67,10 +67,11 @@ func (l *Producer) BundlesMiner() error {
 
 		kind = l.svcCtx.Config.Sol.Kind
 		if kind == -1 {
-			// optimize: distribute the kind.
-			//kind = kindRand.Intn(4)
-			// 谨慎改成随机，在提交速度很快的时候怀疑会出问题
 			kind = index % 4
+		} else if kind == -2 {
+			// optimize: distribute the kind.
+			// 谨慎改成随机, minter的时候要kind改成从0，1，2，3 分四次mint
+			kind = kindRand.Intn(4)
 		} else {
 			account = l.svcCtx.AddrList[0]
 		}
@@ -250,8 +251,7 @@ func (l *Producer) BundlesMiner() error {
 			if err != nil {
 				return err
 			}
-
-			logx.Infof("account:%v jito fee:%v slot:%v kind:%v hashs:%v superhashes:%v Points:%v tx count:%v t:%v",
+			logx.Infof("account:%v jito fee:%v slot:%v kind:%v hashs:%v superhashes:%v Points:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
 				account.PublicKey(),
 				jitoFee,
 				recent.Context.Slot,
@@ -261,7 +261,9 @@ func (l *Producer) BundlesMiner() error {
 				userAccountDataRaw.Superhashes,
 				big.NewInt(0).Div(userSolAccountDataRaw.Points.BigInt(), big.NewInt(1_000_000_000)),
 				len(bundleSignatures),
-				time.Since(t))
+				time.Since(t),
+				float64(jitoFee+5*5000)/3000.0/1000_000_000,
+			)
 
 			return nil
 
