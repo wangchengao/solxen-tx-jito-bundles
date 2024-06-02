@@ -53,6 +53,7 @@ Sol:
   ProgramID: "7LBe4g8Q6hq8Sk1nT8tQUiz2mCHjsoQJbmZ7zCQtutuT"     # solxen合约地址 [solxen contract address]
   Time: 1000                                                    # 间隔时间(单位毫秒) [interval time (milliseconds)]
   HdPAth: m/44'/501'/0'/0'                                      # 钱包地址路径 [wallet derivation path]
+  EnableJitoBundles: true                                       # 启用 jito bundle 一次提交五个tx， fee会变为五个tx的bundle fee tip
 ```
  
 
