@@ -34,12 +34,6 @@ func (l *Producer) BundlesMiner() error {
 	var (
 		fns []func() error
 	)
-	ethAccount := common.HexToAddress(l.svcCtx.Config.Sol.ToAddr)
-	var uint8Array [20]uint8
-	copy(uint8Array[:], ethAccount[:])
-	eth := sol_xen_miner.EthAccount{}
-	eth.Address = uint8Array
-	eth.AddressStr = ethAccount.String()
 
 	// out := make([]rpc.PriorizationFeeResult, 0)
 	// feeAccount := []solana.PublicKey{
@@ -60,8 +54,8 @@ func (l *Producer) BundlesMiner() error {
 	// set jito bundle tips min (uint64(JitoRealTimeTips.P50Landed*1e9)+1, l.svcCtx.Config.Sol.Fee)
 	jitoFee := l.svcCtx.Config.Sol.Fee
 
-	if uint64(JitoRealTimeTips.P50Landed*1e9)+1 < jitoFee {
-		jitoFee = uint64(JitoRealTimeTips.P50Landed*1e9) + 1
+	if uint64(JitoRealTimeTips.P50Landed*1e9)+2 < jitoFee {
+		jitoFee = uint64(JitoRealTimeTips.P50Landed*1e9) + 2
 	}
 
 	for _index, _account := range l.svcCtx.AddrList {
@@ -83,78 +77,8 @@ func (l *Producer) BundlesMiner() error {
 		fns = append(fns, func() error {
 
 			t := time.Now()
-			var (
-				err                error
-				globalXnRecordPda  solana.PublicKey
-				userEthXnRecordPda solana.PublicKey
-				userSolXnRecordPda solana.PublicKey
-			)
-			mr.Finish(
-				func() error {
-					globalXnRecordPda, _, err = solana.FindProgramAddress(
-						[][]byte{
-							[]byte("xn-miner-global"),
-							{uint8(kind)},
-						},
-						l.ProgramIdMiner[kind])
-					if err != nil {
-						return errorx.Wrap(err, "global_xn_record_pda")
-					}
-					return nil
-				},
-				func() error {
-					var (
-						fromAddr string
-					)
-					if common.IsHexAddress(l.svcCtx.Config.Sol.ToAddr) {
-						fromAddr = l.svcCtx.Config.Sol.ToAddr[2:]
-					}
 
-					userEthXnRecordPda, _, err = solana.FindProgramAddress(
-						[][]byte{
-							[]byte("xn-by-eth"),
-							common.FromHex(fromAddr),
-							{uint8(kind)},
-							l.ProgramIdMiner[kind].Bytes(),
-						},
-						l.ProgramIdMiner[kind])
-					if err != nil {
-						return errorx.Wrap(err, "userEthXnRecordAccount")
-					}
-					return nil
-				},
-				func() error {
-
-					userSolXnRecordPda, _, err = solana.FindProgramAddress(
-						[][]byte{
-							[]byte("xn-by-sol"),
-							account.PublicKey().Bytes(),
-							{uint8(kind)},
-							l.ProgramIdMiner[kind].Bytes(),
-						},
-						l.ProgramIdMiner[kind])
-					if err != nil {
-						return errorx.Wrap(err, "global_xn_record_pda")
-					}
-
-					return nil
-				},
-			)
-
-			mintToken := sol_xen_miner.NewMineHashesInstruction(
-				eth,
-				uint8(kind),
-				globalXnRecordPda,
-				userEthXnRecordPda,
-				userSolXnRecordPda,
-				account.PublicKey(),
-				solana.SystemProgramID,
-			).Build()
-
-			// l.svcCtx.Lock.Lock()
-			// sol_xen_miner.SetProgramID(ProgramIdMiner[kind])
-			data, _ := mintToken.Data()
-			instruction := solana.NewInstruction(l.ProgramIdMiner[kind], mintToken.Accounts(), data)
+			instruction, _, userEthXnRecordPda, userSolXnRecordPda := l.genMineInstruct(account, kind)
 			// l.svcCtx.Lock.Unlock()
 
 			recent, err := l.svcCtx.SolCli.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
@@ -163,14 +87,14 @@ func (l *Producer) BundlesMiner() error {
 			}
 			rent := recent.Value.Blockhash
 			// 生成普通的tx 4个， jito bundles最多支持5个
+			// 更多能打散开，为以后 cache recent hash作准备
+			floor := uint32(mineCnt % 10)
 			bundleSignatures := []string{}
 			for i := 0; i < 4; i++ {
 				// 防止生成的tx hash一样。
-				limit := computebudget.NewSetComputeUnitLimitInstruction(1150000 + uint32(i)).Build()
+				limit := computebudget.NewSetComputeUnitLimitInstruction(1360000 + floor*10 + uint32(i)).Build()
 
-				//feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(uint64(i)).Build()
 				tx, err := solana.NewTransactionBuilder().
-					//AddInstruction(feesInit).
 					AddInstruction(limit).
 					AddInstruction(instruction).
 					SetRecentBlockHash(rent).
@@ -188,13 +112,11 @@ func (l *Producer) BundlesMiner() error {
 			}
 
 			// 最后一个 加bundles fee
-			//feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(0).Build()
 			jitoFeesInit := systemix.NewTransferInstructionBuilder().SetFundingAccount(account.PublicKey()).SetRecipientAccount(
 				GetTipAddress()).SetLamports(
 				jitoFee).Build()
-			limit := computebudget.NewSetComputeUnitLimitInstruction(1150000).Build()
+			limit := computebudget.NewSetComputeUnitLimitInstruction(1360000 + floor*10).Build()
 			feetx, err := solana.NewTransactionBuilder().
-				//AddInstruction(feesInit).
 				AddInstruction(limit).
 				AddInstruction(instruction).
 				AddInstruction(jitoFeesInit).
@@ -283,7 +205,7 @@ func (l *Producer) BundlesMiner() error {
 					big.NewInt(0).Div(userSolAccountDataRaw.Points.BigInt(), big.NewInt(1_000_000_000)),
 					len(bundleSignatures),
 					time.Since(t),
-					float64(jitoFee+5*5000)/3000.0/1000_000_000,
+					float64(jitoFee+5*5000)/2500.0/1000_000_000,
 				)
 
 				// check account balance
@@ -303,6 +225,89 @@ func (l *Producer) BundlesMiner() error {
 	}
 	return nil
 
+}
+func (l *Producer) genMineInstruct(account *solana.Wallet, kind int) (solana.Instruction, solana.PublicKey, solana.PublicKey, solana.PublicKey) {
+
+	ethAccount := common.HexToAddress(l.svcCtx.Config.Sol.ToAddr)
+	var uint8Array [20]uint8
+	copy(uint8Array[:], ethAccount[:])
+	eth := sol_xen_miner.EthAccount{}
+	eth.Address = uint8Array
+	eth.AddressStr = ethAccount.String()
+
+	var (
+		err                error
+		globalXnRecordPda  solana.PublicKey
+		userEthXnRecordPda solana.PublicKey
+		userSolXnRecordPda solana.PublicKey
+	)
+	mr.Finish(
+		func() error {
+			globalXnRecordPda, _, err = solana.FindProgramAddress(
+				[][]byte{
+					[]byte("xn-miner-global"),
+					{uint8(kind)},
+				},
+				l.ProgramIdMiner[kind])
+			if err != nil {
+				return errorx.Wrap(err, "global_xn_record_pda")
+			}
+			return nil
+		},
+		func() error {
+			var (
+				fromAddr string
+			)
+			if common.IsHexAddress(l.svcCtx.Config.Sol.ToAddr) {
+				fromAddr = l.svcCtx.Config.Sol.ToAddr[2:]
+			}
+
+			userEthXnRecordPda, _, err = solana.FindProgramAddress(
+				[][]byte{
+					[]byte("xn-by-eth"),
+					common.FromHex(fromAddr),
+					{uint8(kind)},
+					l.ProgramIdMiner[kind].Bytes(),
+				},
+				l.ProgramIdMiner[kind])
+			if err != nil {
+				return errorx.Wrap(err, "userEthXnRecordAccount")
+			}
+			return nil
+		},
+		func() error {
+
+			userSolXnRecordPda, _, err = solana.FindProgramAddress(
+				[][]byte{
+					[]byte("xn-by-sol"),
+					account.PublicKey().Bytes(),
+					{uint8(kind)},
+					l.ProgramIdMiner[kind].Bytes(),
+				},
+				l.ProgramIdMiner[kind])
+			if err != nil {
+				return errorx.Wrap(err, "global_xn_record_pda")
+			}
+
+			return nil
+		},
+	)
+
+	mintToken := sol_xen_miner.NewMineHashesInstruction(
+		eth,
+		uint8(kind),
+		globalXnRecordPda,
+		userEthXnRecordPda,
+		userSolXnRecordPda,
+		account.PublicKey(),
+		solana.SystemProgramID,
+	).Build()
+
+	// l.svcCtx.Lock.Lock()
+	// sol_xen_miner.SetProgramID(ProgramIdMiner[kind])
+	data, _ := mintToken.Data()
+	instruction := solana.NewInstruction(l.ProgramIdMiner[kind], mintToken.Accounts(), data)
+	return instruction, globalXnRecordPda, userEthXnRecordPda, userSolXnRecordPda
 }
 
 func txToString(tx *solana.Transaction, account *solana.Wallet) (string, error) {
