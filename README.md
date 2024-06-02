@@ -1,5 +1,35 @@
 # solXen mint工具 [solXen Mint Tool]
 
+## 重要 改动支持了jito bundle。单线程就可以基本跑满。
+### 安装 （需要golang v1.21.0 以上版本）
+
+```shell
+git clone git@github.com:wangchengao/solxen-tx-jito-bundles.git
+make all
+
+// 之后修改solana-tx.yaml 设置 EnableJitoBundles: true 
+
+./solxen-tx miner
+```
+### 性能：
+榜单
+![img.png](readme/img.png)
+
+提交详情
+![img_1.png](readme/img_1.png)
+
+在 5500 tip fee情况下（平均每个tx 1100 优先费）， 轻松hash rate到榜一。
+
+### 特性
+1. 去除了多余的 Instruction ， 可以做到 5000 tip fee就能轻松提交tx成功。
+2. 对jito的 多个 api 负载均衡，增加请求qps。
+
+### 如果对你有帮助，可以对我进行打赏
+sol address: 3fVhXMEQJLsWQsFcWy9zTgEmyjUutDaYKQT1gEkHNb4y
+eth address: 0x5f96ae068a258eb0dd4456ef2eec3c3d89fb064f
+
+--------
+## 下面是官方版本的Readme
 ## 特点 [Features]
 ```shell
 支持多线程并发模式 [Supports multithreaded concurrent mode] done
