@@ -18,6 +18,20 @@ type JitoResponse struct {
 	Result string
 }
 
+var jitoRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+var rpcEndpoints = []string{
+	"https://mainnet.block-engine.jito.wtf/api/v1/bundles",
+	"https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+	"https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+	"https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+	"https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+}
+
+func getEndpoint() string {
+	return rpcEndpoints[jitoRand.Intn(len(rpcEndpoints))]
+}
+
 func makeJitoRequest(method string, params interface{}) (string, error) {
 	requestBody, err := json.Marshal(map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -29,7 +43,7 @@ func makeJitoRequest(method string, params interface{}) (string, error) {
 		return "", fmt.Errorf("fail to encode request body: %v", err)
 	}
 
-	response, err := http.Post("https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles", "application/json", bytes.NewBuffer(requestBody))
+	response, err := http.Post(getEndpoint(), "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", fmt.Errorf("fail to send request: %v", err)
 	}
@@ -139,8 +153,6 @@ var tipAddress = []solana.PublicKey{
 	solana.MustPublicKeyFromBase58("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
 }
 
-var tipRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 func GetTipAddress() solana.PublicKey {
-	return tipAddress[tipRand.Intn(len(tipAddress))]
+	return tipAddress[jitoRand.Intn(len(tipAddress))]
 }

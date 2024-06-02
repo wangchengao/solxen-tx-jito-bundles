@@ -28,8 +28,7 @@ var bundleInitOnce sync.Once
 func (l *Producer) BundlesMiner() error {
 	bundleInitOnce.Do(InitBundle)
 	var (
-		fns   []func() error
-		limit = computebudget.NewSetComputeUnitLimitInstruction(1150000).Build()
+		fns []func() error
 	)
 	ethAccount := common.HexToAddress(l.svcCtx.Config.Sol.ToAddr)
 	var uint8Array [20]uint8
@@ -159,9 +158,11 @@ func (l *Producer) BundlesMiner() error {
 			bundleSignatures := []string{}
 			for i := 0; i < 4; i++ {
 				// 防止生成的tx hash一样。
-				feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(uint64(i)).Build()
+				limit := computebudget.NewSetComputeUnitLimitInstruction(1150000 + uint32(i)).Build()
+
+				//feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(uint64(i)).Build()
 				tx, err := solana.NewTransactionBuilder().
-					AddInstruction(feesInit).
+					//AddInstruction(feesInit).
 					AddInstruction(limit).
 					AddInstruction(instruction).
 					SetRecentBlockHash(rent).
@@ -179,15 +180,16 @@ func (l *Producer) BundlesMiner() error {
 			}
 
 			// 最后一个 加bundles fee
-			feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(0).Build()
+			//feesInit := computebudget.NewSetComputeUnitPriceInstructionBuilder().SetMicroLamports(0).Build()
 			jitoFeesInit := systemix.NewTransferInstructionBuilder().SetFundingAccount(account.PublicKey()).SetRecipientAccount(
 				GetTipAddress()).SetLamports(
 				jitoFee).Build()
+			limit := computebudget.NewSetComputeUnitLimitInstruction(1150000).Build()
 			feetx, err := solana.NewTransactionBuilder().
-				AddInstruction(feesInit).
-				AddInstruction(jitoFeesInit).
+				//AddInstruction(feesInit).
 				AddInstruction(limit).
 				AddInstruction(instruction).
+				AddInstruction(jitoFeesInit).
 				SetRecentBlockHash(rent).
 				SetFeePayer(account.PublicKey()).
 				Build()
