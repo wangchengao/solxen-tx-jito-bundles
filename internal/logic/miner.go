@@ -239,29 +239,14 @@ func (l *Producer) Miner() error {
 
 }
 
-func (l *Producer) CheckAddressBalance() error {
-
-	var (
-		fns []func() error
-	)
-	for _, addr := range l.svcCtx.AddrList {
-		fns = append(fns, func() error {
-			balance, err := l.svcCtx.SolCli.GetBalance(l.ctx, addr.PublicKey(), rpc.CommitmentFinalized)
-			if err != nil {
-				return err
-			}
-			if (balance.Value) < 1_000_000 {
-				return errorx.Wrap(err, fmt.Sprintf("%v Balance less than 0.01, please recharge.余额小于0.01请充值", addr.PublicKey()))
-			}
-			return nil
-		})
-
-	}
-	err := mr.Finish(
-		fns...,
-	)
+func (l *Producer) CheckAddressBalance(addr *solana.Wallet) error {
+	balance, err := l.svcCtx.SolCli.GetBalance(l.ctx, addr.PublicKey(), rpc.CommitmentFinalized)
 	if err != nil {
-		logx.Errorf("err %v", err)
+		logx.Errorf("GetBalance err:%+v", err)
+		return nil
+	}
+	if (balance.Value) < 2_000_000 {
+		return errorx.Wrap(err, fmt.Sprintf("%v Balance less than 0.02, please recharge.余额小于0.02请充值", addr.PublicKey()))
 	}
 	return nil
 }

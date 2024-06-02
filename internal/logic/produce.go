@@ -90,11 +90,11 @@ func (l *Producer) Start() {
 
 	for {
 		// 1. CheckAddressBalance
-		err := l.CheckAddressBalance()
-		if err != nil {
-			logx.Errorf("%v", err)
-			return
-		}
+		//err := l.CheckAddressBalance()
+		//if err != nil {
+		//	logx.Errorf("%v", err)
+		//	return
+		//}
 		// todo 2.QueryNetWorkGas
 		// err = l.QueryNetWorkGas()
 		// if err != nil {
@@ -104,13 +104,13 @@ func (l *Producer) Start() {
 
 		// 3.Miner
 		if l.svcCtx.Config.Sol.EnableJitoBundles {
-			err = l.BundlesMiner()
+			err := l.BundlesMiner()
 			if err != nil {
 				logx.Errorf("Mint err:%v", err)
 				continue
 			}
 		} else {
-			err = l.Miner()
+			err := l.Miner()
 			if err != nil {
 				logx.Errorf("Mint err:%v", err)
 				continue

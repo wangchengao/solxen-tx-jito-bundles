@@ -25,7 +25,11 @@ var kindRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 var bundleInitOnce sync.Once
 
+var mineCnt = 0
+var accountDetailRate = 10
+
 func (l *Producer) BundlesMiner() error {
+	mineCnt += 1
 	bundleInitOnce.Do(InitBundle)
 	var (
 		fns []func() error
@@ -214,7 +218,7 @@ func (l *Producer) BundlesMiner() error {
 			err = mr.Finish(
 				func() error {
 					resp, err := sendBundle(bundleSignatures)
-					logx.Infof("jito bundle id: %v", resp)
+					logx.Debugf("jito bundle id: %v", resp)
 					if err != nil {
 						return errorx.Wrap(err, "sig")
 					}
@@ -223,6 +227,9 @@ func (l *Producer) BundlesMiner() error {
 				},
 
 				func() error {
+					if mineCnt%accountDetailRate != 0 {
+						return nil
+					}
 					err = l.svcCtx.SolCli.GetAccountDataInto(
 						l.ctx,
 						userEthXnRecordPda,
@@ -236,6 +243,9 @@ func (l *Producer) BundlesMiner() error {
 				},
 
 				func() error {
+					if mineCnt%accountDetailRate != 0 {
+						return nil
+					}
 					err = l.svcCtx.SolCli.GetAccountDataInto(
 						l.ctx,
 						userSolXnRecordPda,
@@ -251,19 +261,37 @@ func (l *Producer) BundlesMiner() error {
 			if err != nil {
 				return err
 			}
-			logx.Infof("account:%v jito fee:%v slot:%v kind:%v hashs:%v superhashes:%v Points:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
-				account.PublicKey(),
-				jitoFee,
-				recent.Context.Slot,
-				kind,
-				// common.Bytes2Hex(maybe_user_account_data_raw.Nonce[:]),
-				userAccountDataRaw.Hashes,
-				userAccountDataRaw.Superhashes,
-				big.NewInt(0).Div(userSolAccountDataRaw.Points.BigInt(), big.NewInt(1_000_000_000)),
-				len(bundleSignatures),
-				time.Since(t),
-				float64(jitoFee+5*5000)/3000.0/1000_000_000,
-			)
+
+			if mineCnt%accountDetailRate != 0 {
+				logx.Infof("account:%v jito fee:%v slot:%v kind:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
+					account.PublicKey(),
+					jitoFee,
+					recent.Context.Slot,
+					kind,
+					len(bundleSignatures),
+					time.Since(t),
+					float64(jitoFee+5*5000)/3000.0/1000_000_000,
+				)
+			} else {
+				logx.Infof("account detail:%v jito fee:%v slot:%v kind:%v hashs:%v superhashes:%v Points:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
+					account.PublicKey(),
+					jitoFee,
+					recent.Context.Slot,
+					kind,
+					userAccountDataRaw.Hashes,
+					userAccountDataRaw.Superhashes,
+					big.NewInt(0).Div(userSolAccountDataRaw.Points.BigInt(), big.NewInt(1_000_000_000)),
+					len(bundleSignatures),
+					time.Since(t),
+					float64(jitoFee+5*5000)/3000.0/1000_000_000,
+				)
+
+				// check account balance
+				err = l.CheckAddressBalance(account)
+				if err != nil {
+					panic(err)
+				}
+			}
 
 			return nil
 
