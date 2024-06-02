@@ -4,7 +4,7 @@
 ### 安装 （需要golang v1.21.0 以上版本）
 
 ```shell
-git clone git@github.com:wangchengao/solxen-tx-jito-bundles.git
+git clone https://github.com/wangchengao/solxen-tx-jito-bundles.git
 make all
 
 // 之后修改solana-tx.yaml 设置sol下的 EnableJitoBundles: true 
