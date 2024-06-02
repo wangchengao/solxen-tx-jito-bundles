@@ -153,6 +153,9 @@ func (l *Producer) BundlesMiner() error {
 			// l.svcCtx.Lock.Unlock()
 
 			recent, err := l.svcCtx.SolCli.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
+			if err != nil {
+				return errorx.Wrap(err, "network.")
+			}
 			rent := recent.Value.Blockhash
 			// 生成普通的tx 4个， jito bundles最多支持5个
 			bundleSignatures := []string{}

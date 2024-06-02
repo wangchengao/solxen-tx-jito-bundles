@@ -7,7 +7,7 @@
 git clone git@github.com:wangchengao/solxen-tx-jito-bundles.git
 make all
 
-// 之后修改solana-tx.yaml 设置 EnableJitoBundles: true 
+// 之后修改solana-tx.yaml 设置sol下的 EnableJitoBundles: true 
 
 ./solxen-tx miner
 ```
@@ -22,7 +22,7 @@ make all
 
 ### 特性
 1. 去除了多余的 Instruction ， 可以做到 5000 tip fee就能轻松提交tx成功。
-2. 对jito的 多个 api 负载均衡，增加请求qps。
+2. 对jito bundles 的 多个 api 负载均衡，增加请求qps。
 
 ### 如果对你有帮助，可以对我进行打赏
 sol address: 3fVhXMEQJLsWQsFcWy9zTgEmyjUutDaYKQT1gEkHNb4y
