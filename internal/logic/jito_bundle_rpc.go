@@ -42,8 +42,8 @@ func makeJitoRequest(method string, params interface{}) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fail to encode request body: %v", err)
 	}
-
-	response, err := http.Post(getEndpoint(), "application/json", bytes.NewBuffer(requestBody))
+	url := getEndpoint()
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		return "", fmt.Errorf("fail to send request: %v", err)
 	}
@@ -51,7 +51,7 @@ func makeJitoRequest(method string, params interface{}) (string, error) {
 
 	if response.StatusCode != http.StatusOK {
 		bodyText, _ := io.ReadAll(response.Body)
-		return "", fmt.Errorf("status code: %d, response: %s", response.StatusCode, string(bodyText))
+		return "", fmt.Errorf("status code: %d, response: %s， url:%s", response.StatusCode, string(bodyText), url)
 	}
 
 	responseBody, err := io.ReadAll(response.Body)
@@ -113,7 +113,7 @@ func subscribeJitoTips(url string) {
 		logx.Infof("boundle tips msg: %v", string(message))
 		if err != nil {
 			fmt.Printf("read error: %v\n", err)
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 			continue
 		}
 

@@ -57,7 +57,7 @@ func (l *Producer) BundlesMiner() error {
 	if uint64(JitoRealTimeTips.P50Landed*1e9)+2 < jitoFee {
 		jitoFee = uint64(JitoRealTimeTips.P50Landed*1e9) + 2
 	}
-
+	
 	for _index, _account := range l.svcCtx.AddrList {
 		account := _account
 		index := _index
@@ -86,17 +86,20 @@ func (l *Producer) BundlesMiner() error {
 				return errorx.Wrap(err, "network.")
 			}
 			rent := recent.Value.Blockhash
+
 			// 生成普通的tx 4个， jito bundles最多支持5个
 			// 更多能打散开，为以后 cache recent hash作准备
 			floor := uint32(mineCnt % 10)
 			bundleSignatures := []string{}
 			for i := 0; i < 4; i++ {
 				// 防止生成的tx hash一样。
-				limit := computebudget.NewSetComputeUnitLimitInstruction(1360000 + floor*10 + uint32(i)).Build()
-
+				//instruction, _, _, _ := l.genMineInstruct(account, kind)
+				limit := computebudget.NewSetComputeUnitLimitInstruction(1560000 + floor*10 + uint32(i)).Build()
+				memoIx := solana.NewInstruction(solana.MemoProgramID, nil, []byte(fmt.Sprintf("plopl666:%f", kindRand.Float64())))
 				tx, err := solana.NewTransactionBuilder().
 					AddInstruction(limit).
 					AddInstruction(instruction).
+					AddInstruction(memoIx).
 					SetRecentBlockHash(rent).
 					SetFeePayer(account.PublicKey()).
 					Build()
@@ -115,7 +118,9 @@ func (l *Producer) BundlesMiner() error {
 			jitoFeesInit := systemix.NewTransferInstructionBuilder().SetFundingAccount(account.PublicKey()).SetRecipientAccount(
 				GetTipAddress()).SetLamports(
 				jitoFee).Build()
-			limit := computebudget.NewSetComputeUnitLimitInstruction(1360000 + floor*10).Build()
+
+			limit := computebudget.NewSetComputeUnitLimitInstruction(1560000 + floor*10).Build()
+
 			feetx, err := solana.NewTransactionBuilder().
 				AddInstruction(limit).
 				AddInstruction(instruction).
