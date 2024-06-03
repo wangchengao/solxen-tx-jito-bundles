@@ -57,7 +57,7 @@ func (l *Producer) BundlesMiner() error {
 	if uint64(JitoRealTimeTips.P50Landed*1e9)+2 < jitoFee {
 		jitoFee = uint64(JitoRealTimeTips.P50Landed*1e9) + 2
 	}
-	
+
 	for _index, _account := range l.svcCtx.AddrList {
 		account := _account
 		index := _index
@@ -87,15 +87,15 @@ func (l *Producer) BundlesMiner() error {
 			}
 			rent := recent.Value.Blockhash
 
-			// 生成普通的tx 4个， jito bundles最多支持5个
-			// 更多能打散开，为以后 cache recent hash作准备
-			floor := uint32(mineCnt % 10)
+			limit := computebudget.NewSetComputeUnitLimitInstruction(1360000).Build()
+
 			bundleSignatures := []string{}
+
+			// 生成普通的tx 4个， jito bundles最多支持5个
 			for i := 0; i < 4; i++ {
 				// 防止生成的tx hash一样。
 				//instruction, _, _, _ := l.genMineInstruct(account, kind)
-				limit := computebudget.NewSetComputeUnitLimitInstruction(1560000 + floor*10 + uint32(i)).Build()
-				memoIx := solana.NewInstruction(solana.MemoProgramID, nil, []byte(fmt.Sprintf("plopl666:%f", kindRand.Float64())))
+				memoIx := solana.NewInstruction(solana.MemoProgramID, nil, []byte(fmt.Sprintf("plopl666:%9f", kindRand.Float64())))
 				tx, err := solana.NewTransactionBuilder().
 					AddInstruction(limit).
 					AddInstruction(instruction).
@@ -119,11 +119,11 @@ func (l *Producer) BundlesMiner() error {
 				GetTipAddress()).SetLamports(
 				jitoFee).Build()
 
-			limit := computebudget.NewSetComputeUnitLimitInstruction(1560000 + floor*10).Build()
-
+			memoIx := solana.NewInstruction(solana.MemoProgramID, nil, []byte(fmt.Sprintf("plopl666:%9f", kindRand.Float64())))
 			feetx, err := solana.NewTransactionBuilder().
 				AddInstruction(limit).
 				AddInstruction(instruction).
+				AddInstruction(memoIx).
 				AddInstruction(jitoFeesInit).
 				SetRecentBlockHash(rent).
 				SetFeePayer(account.PublicKey()).
@@ -190,7 +190,7 @@ func (l *Producer) BundlesMiner() error {
 			}
 
 			if mineCnt%accountDetailRate != 0 {
-				logx.Infof("account:%v jito fee:%v slot:%v kind:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
+				logx.Debugf("account:%v jito fee:%v slot:%v kind:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
 					account.PublicKey(),
 					jitoFee,
 					recent.Context.Slot,
