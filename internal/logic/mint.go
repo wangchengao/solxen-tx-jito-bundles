@@ -32,6 +32,7 @@ func (l *Producer) Mint() error {
 		kind = l.svcCtx.Config.Sol.Kind
 		if kind == -1 {
 			kind = index % 4
+		} else if kind == -2 {
 		} else {
 			account = l.svcCtx.AddrList[0]
 		}
@@ -53,39 +54,7 @@ func (l *Producer) Mint() error {
 					l.svcCtx.Config.Sol.Fee).Build()
 				limit := computebudget.NewSetComputeUnitLimitInstruction(1360000).Build()
 
-				//for k := 0; k < 2; k++ {
-				//	instruction, _ := l.genMinterInstruct(account, k)
-				//	tx, err := solana.NewTransactionBuilder().
-				//		AddInstruction(limit).
-				//		AddInstruction(instruction).
-				//		SetRecentBlockHash(rent).
-				//		SetFeePayer(account.PublicKey()).
-				//		Build()
-				//	if err != nil {
-				//		return errorx.Wrap(err, "tx")
-				//	}
-				//
-				//	_, err = tx.Sign(
-				//		func(key solana.PublicKey) *solana.PrivateKey {
-				//			for _, signer := range signers {
-				//				if signer.PublicKey().Equals(key) {
-				//					return &signer
-				//				}
-				//			}
-				//			return nil
-				//		},
-				//	)
-				//	if err != nil {
-				//		return errorx.Wrap(err, "Sign")
-				//	}
-				//
-				//	txString, err := txToString(tx, account)
-				//	if err != nil {
-				//		return errorx.Wrap(err, "txString")
-				//	}
-				//	bundleSignatures = append(bundleSignatures, txString)
-				//}
-
+				// kind != -2 minter 单个kind
 				tx, err := solana.NewTransactionBuilder().
 					AddInstruction(limit).
 					AddInstruction(instruction).
@@ -97,16 +66,51 @@ func (l *Producer) Mint() error {
 					return errorx.Wrap(err, "tx")
 				}
 
-				//resp, err := l.svcCtx.SolCli.SendTransactionWithOpts(context.Background(), tx, rpc.TransactionOpts{
-				//	SkipPreflight: false,
-				//})
-				//print(fmt.Sprintf("%v, %v", resp, err))
-
 				txString, err := txToString(tx, account)
 				if err != nil {
 					return errorx.Wrap(err, "txString")
 				}
 				bundleSignatures = append(bundleSignatures, txString)
+
+				if kind == -2 {
+					// -2 要minter 所有 kind 0-3
+					bundleSignatures = []string{}
+					for k := 0; k < 3; k++ {
+						instruction, _ := l.genMinterInstruct(account, k)
+						tx, err := solana.NewTransactionBuilder().
+							AddInstruction(limit).
+							AddInstruction(instruction).
+							SetRecentBlockHash(rent).
+							SetFeePayer(account.PublicKey()).
+							Build()
+						if err != nil {
+							return errorx.Wrap(err, "tx")
+						}
+
+						txString, err := txToString(tx, account)
+						if err != nil {
+							return errorx.Wrap(err, "txString")
+						}
+						bundleSignatures = append(bundleSignatures, txString)
+					}
+					instruction, _ := l.genMinterInstruct(account, 3)
+					tx, err := solana.NewTransactionBuilder().
+						AddInstruction(limit).
+						AddInstruction(instruction).
+						AddInstruction(jitoFeesInx).
+						SetRecentBlockHash(rent).
+						SetFeePayer(account.PublicKey()).
+						Build()
+					if err != nil {
+						return errorx.Wrap(err, "tx")
+					}
+
+					txString, err := txToString(tx, account)
+					if err != nil {
+						return errorx.Wrap(err, "txString")
+					}
+					bundleSignatures = append(bundleSignatures, txString)
+				}
 
 				resp, err := sendBundle(bundleSignatures)
 				logx.Infof("jito bundle id: %v", resp)
@@ -115,6 +119,9 @@ func (l *Producer) Mint() error {
 				}
 
 			} else {
+				if kind == -2 {
+					panic("not support kind = -2 without jito bundles")
+				}
 				tx, err := solana.NewTransactionBuilder().
 					AddInstruction(feesInit).
 					// AddInstruction(limit).
@@ -188,6 +195,9 @@ func (l *Producer) Mint() error {
 }
 
 func (l *Producer) genMinterInstruct(account *solana.Wallet, kind int) (solana.Instruction, solana.PublicKey) {
+	if kind == -2 {
+		kind = 0
+	}
 	programId := solana.MustPublicKeyFromBase58(l.svcCtx.Config.Sol.ProgramId)
 
 	mint_pda, _, err := solana.FindProgramAddress(
