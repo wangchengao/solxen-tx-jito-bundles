@@ -197,7 +197,7 @@ func (l *Producer) BundlesMiner() error {
 					kind,
 					len(bundleSignatures),
 					time.Since(t),
-					float64(jitoFee+5*5000)/3000.0/1000_000_000,
+					float64(jitoFee+5*5000)/2890/1000_000_000/0.95,
 				)
 			} else {
 				logx.Infof("account detail:%v jito fee:%v slot:%v kind:%v hashs:%v superhashes:%v Points:%v tx count:%v t:%v, avg cost: %.9f xen/sol",
@@ -210,7 +210,7 @@ func (l *Producer) BundlesMiner() error {
 					big.NewInt(0).Div(userSolAccountDataRaw.Points.BigInt(), big.NewInt(1_000_000_000)),
 					len(bundleSignatures),
 					time.Since(t),
-					float64(jitoFee+5*5000)/2500.0/1000_000_000,
+					float64(jitoFee+5*5000)/2890/1000_000_000/0.95,
 				)
 
 				// check account balance
